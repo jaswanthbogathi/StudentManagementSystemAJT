@@ -1,3 +1,4 @@
+
 package com.studentmanagement;
 
 import java.sql.Connection;
@@ -7,36 +8,38 @@ import java.sql.SQLException;
 
 public class UserDAO {
 
-    // Login method
     public User login(String username, String password) {
 
-        String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+        if (username == null || password == null) {
+            return null;
+        }
 
-        try (
-            Connection con = DBConnection.getConnection();
-            PreparedStatement ps = con.prepareStatement(sql)
-        ) {
+        String sql = "SELECT user_id, username, password, role "
+                   + "FROM users WHERE username = ?";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, username);
-            ps.setString(2, password);
 
-            ResultSet rs = ps.executeQuery();
+            try (ResultSet rs = ps.executeQuery()) {
 
-            if (rs.next()) {
+                if (rs.next() &&
+                    PasswordUtil.verify(
+                        password, rs.getString("password"))) {
 
-                User user = new User();
+                    User user = new User();
+                    user.setUserId(rs.getInt("user_id"));
+                    user.setUsername(rs.getString("username"));
+                    user.setRole(rs.getString("role"));
 
-                user.setUserId(rs.getInt("user_id"));
-                user.setUsername(rs.getString("username"));
-                user.setPassword(rs.getString("password"));
-                user.setRole(rs.getString("role"));
-
-                return user;
+                    return user;
+                }
             }
 
         } catch (SQLException e) {
-
-            e.printStackTrace();
+            throw new IllegalStateException(
+                "Login database error", e);
         }
 
         return null;
